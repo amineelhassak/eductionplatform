@@ -1,0 +1,32 @@
+// Prisma schema for the Learning Platform
+// Docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AuthProvider {
+  google
+  email
+}
+
+model User {
+  id         String       @id @default(uuid())
+  email      String       @unique
+  name       String?
+  password   String?      // Only for email/password auth (hashed)
+  provider   AuthProvider
+  providerId String?      // Firebase UID or OAuth provider ID
+  avatar     String?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@index([email])
+  @@index([providerId])
+  @@map("users")
+}
