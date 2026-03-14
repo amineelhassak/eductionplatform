@@ -1,4 +1,4 @@
-// Prisma schema for the Learning Platform
+// Prisma schema for the Moroccan Learning Platform
 // Docs: https://pris.ly/d/prisma-schema
 
 generator client {
@@ -10,23 +10,312 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─── Enums ──────────────────────────────────────────────────
+
 enum AuthProvider {
   google
   email
 }
 
+enum UserRole {
+  student
+  teacher
+  admin
+}
+
+enum SchoolLevel {
+  AC1   // 1ère Année Collège
+  AC2   // 2ème Année Collège
+  AC3   // 3ème Année Collège
+  TCS   // Tronc Commun Scientifique
+  BAC1  // 1ère BAC
+  BAC2  // 2ème BAC
+}
+
+enum Subject {
+  math
+  physics_chemistry
+  svt
+  arabic
+  french
+  english
+  philosophy
+  islamic_education
+  history_geography
+}
+
+enum LessonType {
+  video
+  pdf
+  exercise
+  exam
+  correction
+}
+
+enum ExamType {
+  national
+  regional
+}
+
+enum BookingStatus {
+  pending
+  confirmed
+  cancelled
+  completed
+}
+
+enum LessonMode {
+  online
+  in_person
+}
+
+// ─── User ───────────────────────────────────────────────────
+
 model User {
   id         String       @id @default(uuid())
   email      String       @unique
   name       String?
-  password   String?      // Only for email/password auth (hashed)
+  password   String?
   provider   AuthProvider
-  providerId String?      // Firebase UID or OAuth provider ID
+  providerId String?
   avatar     String?
+  role       UserRole     @default(student)
   createdAt  DateTime     @default(now())
   updatedAt  DateTime     @updatedAt
 
+  // Teacher-specific profile (1:1)
+  teacherProfile TeacherProfile?
+
+  // Student relations
+  enrollments  Enrollment[]
+  savedLessons SavedLesson[]
+  bookings     Booking[]       @relation("StudentBookings")
+  sentMessages Message[]       @relation("SentMessages")
+  receivedMessages Message[]   @relation("ReceivedMessages")
+  reviews      Review[]
+
   @@index([email])
   @@index([providerId])
+  @@index([role])
   @@map("users")
+}
+
+// ─── Teacher Profile ────────────────────────────────────────
+
+model TeacherProfile {
+  id          String    @id @default(uuid())
+  userId      String    @unique
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  bio         String?
+  city        String?
+  phone       String?
+  cvUrl       String?          // uploaded CV
+  pricePerHour Float?
+  subjects    Subject[]
+  levels      SchoolLevel[]
+  isVerified  Boolean   @default(false)
+  rating      Float     @default(0)
+  totalStudents Int     @default(0)
+
+  // Relations
+  courses   Course[]
+  bookings  Booking[]  @relation("TeacherBookings")
+  availability TeacherAvailability[]
+
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([city])
+  @@index([isVerified])
+  @@map("teacher_profiles")
+}
+
+model TeacherAvailability {
+  id        String   @id @default(uuid())
+  profileId String
+  profile   TeacherProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  dayOfWeek Int      // 0=Sunday … 6=Saturday
+  startTime String   // "09:00"
+  endTime   String   // "10:00"
+
+  @@map("teacher_availability")
+}
+
+// ─── Course ─────────────────────────────────────────────────
+
+model Course {
+  id          String       @id @default(uuid())
+  title       String
+  description String?
+  thumbnail   String?
+  level       SchoolLevel
+  subject     Subject
+  teacherId   String
+  teacher     TeacherProfile @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  isFeatured  Boolean      @default(false)
+  isPublished Boolean      @default(false)
+
+  lessons     Lesson[]
+  enrollments Enrollment[]
+  reviews     Review[]
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([level, subject])
+  @@index([teacherId])
+  @@index([isFeatured])
+  @@map("courses")
+}
+
+// ─── Lesson ─────────────────────────────────────────────────
+
+model Lesson {
+  id          String     @id @default(uuid())
+  courseId    String
+  course      Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String?
+  type        LessonType
+  fileUrl     String?    // video URL, PDF URL, etc.
+  duration    Int?       // seconds (for video)
+  sortOrder   Int        @default(0)
+
+  savedBy     SavedLesson[]
+
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([courseId, sortOrder])
+  @@map("lessons")
+}
+
+// ─── Enrollment ─────────────────────────────────────────────
+
+model Enrollment {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId   String
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  progress  Float    @default(0) // 0-100
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, courseId])
+  @@map("enrollments")
+}
+
+model SavedLesson {
+  id       String @id @default(uuid())
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId String
+  lesson   Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, lessonId])
+  @@map("saved_lessons")
+}
+
+// ─── National & Regional Exams ──────────────────────────────
+
+model Exam {
+  id        String      @id @default(uuid())
+  title     String
+  year      Int
+  type      ExamType
+  subject   Subject
+  level     SchoolLevel
+  fileUrl   String      // exam PDF
+  correctionUrl String? // correction PDF
+
+  createdAt DateTime    @default(now())
+
+  @@index([year, subject, level])
+  @@map("exams")
+}
+
+// ─── Booking ────────────────────────────────────────────────
+
+model Booking {
+  id          String        @id @default(uuid())
+  studentId   String
+  student     User          @relation("StudentBookings", fields: [studentId], references: [id], onDelete: Cascade)
+  teacherId   String
+  teacher     TeacherProfile @relation("TeacherBookings", fields: [teacherId], references: [id], onDelete: Cascade)
+
+  date        DateTime
+  startTime   String        // "14:00"
+  endTime     String        // "15:00"
+  mode        LessonMode
+  subject     Subject
+  status      BookingStatus @default(pending)
+  note        String?
+
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([studentId])
+  @@index([teacherId])
+  @@index([status])
+  @@map("bookings")
+}
+
+// ─── Messaging ──────────────────────────────────────────────
+
+model Message {
+  id         String   @id @default(uuid())
+  senderId   String
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId String
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+  content    String
+  isRead     Boolean  @default(false)
+
+  createdAt  DateTime @default(now())
+
+  @@index([senderId, receiverId])
+  @@index([receiverId, isRead])
+  @@map("messages")
+}
+
+// ─── Reviews ────────────────────────────────────────────────
+
+model Review {
+  id       String @id @default(uuid())
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId  String
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  rating   Int    // 1-5
+  comment  String?
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, courseId])
+  @@map("reviews")
+}
+
+// ─── Tawjih (Orientation) ───────────────────────────────────
+
+model TawjihArticle {
+  id        String   @id @default(uuid())
+  title     String
+  slug      String   @unique
+  content   String   // rich text / markdown
+  category  String   // e.g. "university", "engineering", "medical", "scholarships"
+  thumbnail String?
+  isPublished Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+  @@index([slug])
+  @@map("tawjih_articles")
 }

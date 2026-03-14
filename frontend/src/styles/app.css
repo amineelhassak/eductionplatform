@@ -1,11 +1,13 @@
 @import "tailwindcss";
 
 /*
-  Platform Learning — Brand Colors
+  EduMaroc — Brand Colors
   Primary Dark:  #1E40AF
   Primary:       #1D4ED8
   Primary Light: #DBEAFE
 */
+
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
   --color-brand-50: #eff6ff;
@@ -19,6 +21,12 @@
   --color-brand-800: #1e3270;
   --color-brand-900: #172554;
 
+  --color-dark-bg: #0f172a;
+  --color-dark-card: #1e293b;
+  --color-dark-border: #334155;
+  --color-dark-text: #e2e8f0;
+  --color-dark-muted: #94a3b8;
+
   --font-sans:
     "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
     "Segoe UI", sans-serif;
@@ -28,5 +36,18 @@
   html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Smooth dark mode transitions */
+  html,
+  body {
+    transition:
+      background-color 0.2s ease,
+      color 0.2s ease;
+  }
+
+  html.dark {
+    background-color: #0f172a;
+    color-scheme: dark;
   }
 }

@@ -1,0 +1,9 @@
+export { Navbar } from "./Navbar";
+export { Hero } from "./Hero";
+export { Categories } from "./Categories";
+export { FeaturedCourses } from "./FeaturedCourses";
+export { TopInstructors } from "./TopInstructors";
+export { Benefits } from "./Benefits";
+export { Testimonials } from "./Testimonials";
+export { CTA } from "./CTA";
+export { Footer } from "./Footer";

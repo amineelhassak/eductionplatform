@@ -1,3 +1,15 @@
 export { LoginPage } from "./LoginPage";
 export { RegisterPage } from "./RegisterPage";
 export { DashboardPage } from "./DashboardPage";
+export { HomePage } from "./HomePage";
+export { CoursesPage } from "./CoursesPage";
+export { CourseDetailPage } from "./CourseDetailPage";
+export { ExamsPage } from "./ExamsPage";
+export { TeachersPage } from "./TeachersPage";
+export { TeacherDetailPage } from "./TeacherDetailPage";
+export { TawjihPage } from "./TawjihPage";
+export { TawjihArticlePage } from "./TawjihArticlePage";
+export { MessagesPage } from "./MessagesPage";
+export { BookingsPage } from "./BookingsPage";
+export { StudentDashboardPage } from "./StudentDashboardPage";
+export { TeacherDashboardPage } from "./TeacherDashboardPage";

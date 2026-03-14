@@ -133,6 +133,7 @@ export async function getProfile(
  * Clear the authentication cookie.
  */
 export function logout(_req: Request, res: Response): void {
-  res.clearCookie("token", COOKIE_OPTIONS);
+  const { maxAge: _maxAge, ...clearOptions } = COOKIE_OPTIONS;
+  res.clearCookie("token", clearOptions);
   res.status(200).json({ message: "Logged out successfully" });
 }
